@@ -1,4 +1,4 @@
-# comparABle
+# comparABle🦄🔁🐉
 
 comparABle is a small collection of functions in R to **analyse and compare gene expression data across pairs of species**.
 
