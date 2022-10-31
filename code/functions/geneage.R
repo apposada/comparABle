@@ -7,37 +7,45 @@ gene_age_enrichment <- function(
     ) {
 
     modules <- sort(unique(x_modules$module))
-    if (phylostrata != FALSE) {
+    if (phylostrata ! = FALSE) {
         ages <- sort(unique(phylostrata)) # must have numerics at the beginning
     } else {
         ages <- sort(unique(x_age$age)) # must have numerics at the beginning
     }
 
+    x_module_age <- sort(unique(
+        merge(
+            x_modules,
+            x_age,
+            by = 1
+        )
+    ))
+
     pvalmat <- matrix(
-        rep(1,times=length(modules)*length(ages)),
+        rep(1,times = length(modules)*length(ages)),
         nrow = length(modules),
         ncol = length(ages)
     )
 
     enrichmat <- matrix(
-        rep(1,times=length(modules)*length(ages)),
+        rep(1,times = length(modules)*length(ages)),
         nrow = length(modules),
         ncol = length(ages)
     )
 
     for (i in modules) {
-        h <- which(modules == i)
+        h <- which(modules = = i)
         for (j in ages) {
-            n <- which(ages == j)
+            n <- which(ages = = j)
 
             contingency <- matrix(
                 c(
-                    sum(x_module_age$module == i & x_module_age$age == j),
-                    sum(x_module_age$module == i & x_module_age$age != j),
-                    sum(x_module_age$module != i & x_module_age$age == j),
-                    sum(x_module_age$module != i & x_module_age$age != j)
+                    sum(x_module_age$module = = i & x_module_age$age = = j),
+                    sum(x_module_age$module = = i & x_module_age$age ! = j),
+                    sum(x_module_age$module ! = i & x_module_age$age = = j),
+                    sum(x_module_age$module ! = i & x_module_age$age ! = j)
                     ),
-                nrow=2
+                nrow = 2
             )
 
             enrichmat[h,n] <- 100 * # percent
@@ -58,17 +66,17 @@ gene_age_enrichment <- function(
     pvaldf[pvaldf > fisher_pval ] <- 1 # clipped
 
     geneage_ht <- Heatmap(
-    name = "Gene age\nEnrichment",
-    as.matrix(enrichdf),
-    cluster_columns=F,
-    cluster_rows=F,
-    col=colorRampPalette(c("#440154","white","#21908C"))(20),
-    row_names_side="left",
-    column_names_side="top",
-    cell_fun = function(j,i,x,y,width,height,fill){
-        if(as.matrix(pvaldf)[i,j] < 0.05)
-        grid.text("*", x, y, gp = gpar(fontsize=15)) # add asterisk if p < .05
-        }
+        name = "Gene age\nEnrichment",
+        as.matrix(enrichdf),
+        cluster_columns = FALSE,
+        cluster_rows = FALSE,
+        col = colorRampPalette(c("#440154","white","#21908C"))(20),
+        row_names_side = "left",
+        column_names_side = "top",
+        cell_fun = function(j,i,x,y,width,height,fill){
+            if(as.matrix(pvaldf)[i,j] < 0.05)
+            grid.text("*", x, y, gp = gpar(fontsize = 15)) # add asterisk if p < .05
+            }
     )
 
     res <- list(

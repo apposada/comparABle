@@ -184,7 +184,7 @@ commongenes_cor <- function(
 #' comparemodules(ma, mb, f, ga, gb) --> list(a_f, b_f, ma_f, mb_f, 
 #' matrix_hypgeom, matrix_binomial, age_common, age_exclusive)
 comparemodules <- function(ma, mb, f){
-  fam_of = function(x) {f$gfam[f$id = =  x]} # lookup function to grab the family of a given gene
+  fam_of = function(x) {f$gfam[f$id == x]} # lookup function to grab the family of a given gene
   gimme_fams = function(x) { # x is a set of gene names. is this function slow?
     l = c()
     for (i in x){
@@ -279,7 +279,7 @@ comparemodules <- function(ma, mb, f){
   colnames(PVS) <- names(mb_list)
   rownames(PVS_binom) <- names(ma_list)
   colnames(PVS_binom) <- names(mb_list)
-  fon <- fon[!(fon$module_a = =  "none"), ]
+  fon <- fon[!(fon$module_a == "none"), ]
   fon$hypgeom_pval <- as.numeric(fon$hypgeom_pval)
   fon$hypgeom_log <- as.numeric(fon$hypgeom_log)
   fon$hypgeom_binom <- as.numeric(fon$hypgeom_binom)
@@ -342,7 +342,7 @@ genes_in_key_fams <- function(
   top_comparisons = 10
   if( (module_a ! =  F) & (module_b ! =  F)){
     x <- stats[
-      stats$module_a = =  module_a & stats$module_b = =  module_b, 
+      stats$module_a == module_a & stats$module_b == module_b, 
     ]
   } else{
     x <- stats[
@@ -350,21 +350,62 @@ genes_in_key_fams <- function(
     ]
     x <- x[1:top_comparisons, ]
   }
-  x_fams <- list()
-  for (i in 1:nrow(x)){
-    mod_a = x$module_a[i]
+
+  x_fams_a <- list()
+  x_comparison_modules <- data.frame( # rethink the name of this
+    id = "none",
+    module = "none"
+  )
+  x_fams_b <- list()
+
+  for (i in 1:nrow(x)){ # for each instance in the stats tab; ie for each comparison
+    mod_a = x$module_a[i] # module in spp a of that comparison
+    fams_common_i <- unlist(strsplit(x$gfams_common[i], ", ")) # common fams of that comparison
+    genes_module_a <- ma$id[ma$module == mod_a] # genes of spp a in module a of that comparison
+    genes_module_a_commonfams <- genes_module_a[ #those genes
+      genes_module_a %in% # but only those in
+        f[ # the table of gene fams
+          f$gfam %in% fams_common_i,  # whose associated fam is among the common ones
+          2 # column 2 for the genes
+        ]
+    ]
+    x_fams_a[[i]] <- genes_module_a_commonfams
+    x_comparison_modules <- rind(
+      x_comparison_modules,
+      data.frame(
+        id = genes_module_a_commonfams , 
+        module = paste(
+          x$module_a[i],
+          x$module_b[i],
+          sep = "__"
+        )
+      )
+    )
+
+    mod_b = x$module_b[i]
     fams_common_i <- unlist(strsplit(x$gfams_common[i], ", "))
-    genes_module_a <- ma$id[ma$module = =  mod_a]
-    genes_module_a_commonfams <- genes_module_a[
-      genes_module_a %in% 
+    genes_module_b <- mb$id[mb$module == mod_b]
+    genes_module_b_commonfams <- genes_module_b[
+      genes_module_b %in% 
         f[
           f$gfam %in% fams_common_i, 
           2 # column containing the genes
         ]
     ]
-    x_fams[[i]] <- genes_module_a_commonfams
+    x_fams_b[[i]] <- genes_module_b_commonfams
   }
-  names(x_fams) <- paste(x$module_a, x$module_b, sep = "_")
+
+  names(x_fams_a) <- paste(
+    x$module_a,
+    x$module_b,
+    sep = "__" # this will allow easier parsing
+    )
+
+   names(x_fams_b) <- paste(
+    x$module_a,
+    x$module_b,
+    sep = "__" # this will allow easier parsing
+    )
   
   #' ... Alternatively, one might say that this is abt gene 
   #' families now and not the info on a particular species.
@@ -374,17 +415,29 @@ genes_in_key_fams <- function(
   
   #gene age bar/pieplot
   
+  barplot( #check which one looks better . maybe a grid of pie charts?
+  #maybe a grid of piecharts of ALL the comparisons and only in color/highlighted those that are significant?? does Heatmap() allow this?
+    table(
+      x_comparison_modules$module
+    ),
+    las = 2
+  )
+
   #gene age enrichment (barplot of FC up--down )
-  
+  commonfams_age <- gene_age_enrichment(
+    x_modules = x_comparison_modules,
+    x_age = 
+  )
   #heatmap of %orthogroups per gene age of relevance
+
   
   #cog_enrichment
   
   #topgo
-  x_fams_GOs <- list()
-  for (i in 1:nrow(x_fams)){
-    x_fams_GOs[[i]] <- getGOs(x_fams[[i]],gene_universe = universe)
+  x_fams_a_GOs <- list()
+  for (i in 1:nrow(x_fams_a)){
+    x_fams_a_GOs[[i]] <- getGOs(x_fams_a[[i]],gene_universe = universe)
   }
 
-  return(x_fams)
+  return(x_fams_a)
 }
