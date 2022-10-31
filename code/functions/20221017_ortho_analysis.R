@@ -35,17 +35,17 @@ mergedata <- function(a, b, o) {
     x_o <- x_o[order(rownames(x_o)), ]
     return(x_o)
   }
-  
+
   a_o <- merge_x_o(a, o_a)
   b_o <- merge_x_o(b, o_b)
   ab_o <- merge(a_o, b_o, by = 0)
   rownames(ab_o) <- ab_o$Row.names
   ab_o <- ab_o[order(rownames(ab_o)), ]
   ab_o <- ab_o[, !sapply(ab_o, is.character)]
-  
+
   a_o <- a_o[rownames(a_o) %in% rownames(ab_o), ]
   b_o <- b_o[rownames(b_o) %in% rownames(ab_o), ]
-  
+
   res <- list(
     a_o = a_o, 
     b_o = b_o, 
@@ -65,9 +65,9 @@ mergedata <- function(a, b, o) {
 #' spearman, jensen-shannon distance)
 #' rawcorsp(a_o, b_o) --> list(pe:matrix, sp:matrix, js:matrix)
 rawcorsp <- function(a_o, b_o){
-  pe <- cor(merge_ab$a_o, merge_ab$b_o, m = "pe")
-  sp <- cor(merge_ab$a_o, merge_ab$b_o, m = "sp")
-  # je <- jsd(merge_ab$a_o, merge_ab$b_o)
+  pe <- cor(a_o, b_o, m = "pe")
+  sp <- cor(a_o, b_o, m = "sp")
+  # je <- jsd(a_o, b_o)
   
   res <- list(
     pe = pe, 
