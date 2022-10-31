@@ -414,9 +414,9 @@ genes_in_key_fams <- function(
   #' analysis to speak about the particular gene families?
   
   #gene age bar/pieplot
-  
-  barplot( #check which one looks better . maybe a grid of pie charts?
+  #barplot; check which one looks better . maybe a grid of pie charts?
   #maybe a grid of piecharts of ALL the comparisons and only in color/highlighted those that are significant?? does Heatmap() allow this?
+  barplot( 
     table(
       x_comparison_modules$module
     ),
@@ -432,6 +432,7 @@ genes_in_key_fams <- function(
 
   
   #cog_enrichment
+  
   
   #topgo
   x_fams_a_GOs <- list()
