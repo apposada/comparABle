@@ -62,7 +62,7 @@ gene_age_enrichment <- function(
                 nrow = 2
             )
 
-            quantmat[h,n] <- contingency[1,1] # of cog j genes in module i
+            quantmat[h,n] <- contingency[1,1] # no. of COGj-genes in module i
 
             enrichmat[h,n] <- 100 * # percent
             (
@@ -101,7 +101,8 @@ gene_age_enrichment <- function(
     )
 
     res <- list(
-        AgeperModule = quantdf,
+        # add here a pairmodule-gene-gfam table, longformat
+        AgeperModule = quantdf, # this can be normalised and it makes for 
         enrichment = enrichdf,
         pvalue = pvaldf,
         heatmap = geneage_ht

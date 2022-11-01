@@ -104,6 +104,7 @@ cog_enrichment_analysis <- function(x_modules, x_cog, specific_cogs = FALSE, fis
 
     # Return the results
     res <- list(
+        # add here a table with pairmodule-gene-gfam table, long format
         COGperModule = quantdf,
         enrichment = enrichdf,
         pvalue = pvaldf,

@@ -64,7 +64,7 @@ mergedata <- function(a, b, o) {
 #' using several or user-defined metrics (default: pearson, 
 #' spearman, jensen-shannon distance)
 #' rawcorsp(a_o, b_o) --> list(pe:matrix, sp:matrix, js:matrix)
-rawcorsp <- function(a_o, b_o){
+rawcorsp <- function(a_o, b_o){ # make one for TFs or genes of interest
   pe <- cor(a_o, b_o, m = "pe")
   sp <- cor(a_o, b_o, m = "sp")
   # je <- jsd(a_o, b_o)
@@ -179,8 +179,6 @@ commongenes_cor <- function(
 #' comparemodules: gene family enrichment between modules, 
 #' using the gfam object and the modules from each species, 
 #' using a binomial statistical test and/or a hypergeometric test.
-#' It also pulls the common and exclusive fams of the modules, 
-#' and retrieves the gene age enrichment.
 #' comparemodules(ma, mb, f, ga, gb) --> list(a_f, b_f, ma_f, mb_f, 
 #' matrix_hypgeom, matrix_binomial, age_common, age_exclusive)
 comparemodules <- function(ma, mb, f){
@@ -206,7 +204,9 @@ comparemodules <- function(ma, mb, f){
     hypgeom_pval = numeric(1), 
     hypgeom_log = numeric(1), 
     binom_pval =  numeric(1), 
-    gfams_common = "none"
+    gfams_common = "none",
+    gfams_excl_a = "none",
+    gfams_excl_b = "none"
   )
   
   #' Transform into lists for practicality
@@ -238,11 +238,17 @@ comparemodules <- function(ma, mb, f){
       common_fams <- paste(
         a_fams[which(a_fams %in% b_fams)], collapse = ", "
         )
+      exclusive_fams_a <- paste(
+        a_fams[which(!(a_fams %in% b_fams))], collapse = ", "
+        )
+      exclusive_fams_b <- paste(
+        b_fams[which(!(b_fams %in% a_fams))], collapse = ", "
+        )
       success_in_sample <- length(which(a_fams %in% b_fams))
       
       if (success_in_sample > 0) {
-        hypg <- phyper( # HYPGEOM TEST
-          # from https://stackoverflow.com/questions/8382806/hypergeometric-test-phyper
+        hypg <- phyper( # HYPGEOMTEST
+          # from stackoverflow/questions/8382806/hypergeometric-test-phyper
           q = success_in_sample - 1, # no. of success balls drawn from urn
           m = success_in_pop, # no. of success balls in the urn
           n = gene_POP-success_in_pop, # no. of non-success in the urn
@@ -261,7 +267,9 @@ comparemodules <- function(ma, mb, f){
             a_modulei_name, b_modulej_name, 
             success_in_sample, sample_size, 
             success_in_pop, gene_POP, as.numeric(hypg), 
-            -log(hypg), as.numeric(binom), common_fams # add here which are the names of the gfams enriched
+            -log(hypg), as.numeric(binom), common_fams, # add here which are the names of the gfams enriched.
+            exclusive_fams_a, # exclusive fams in a
+            exclusive_fams_b # exclusive fams in b
             )
         )
       } else {
@@ -303,6 +311,7 @@ comparemodules <- function(ma, mb, f){
 }
 
 
+#' Second part of comparemodules.
 #' genes_in_key_fams: Function to retrieve and visualize the enriched
 #' gene families by doing gene age enrichment/visualisation;
 #' basically it takes the fon table, grab the most significant
@@ -312,7 +321,7 @@ comparemodules <- function(ma, mb, f){
 #' a gene age enrichment. Perhaps also a gene ontology to
 #' see the roles of such families. Or COG.
 genes_in_key_fams <- function(
-  stats, f, age, ma, mb, module_a = FALSE, module_b = FALSE, top_comparisons = 10, ... ){
+  stats, f, age, ma, mb, module_a = FALSE, module_b = FALSE, top_comparisons = 10, common = TRUE, exclusive = FALSE , ... ){
   #' The proper way to do this is, taking the exact genes
   #' from that module based on what gene families they
   #' are from.
@@ -350,102 +359,16 @@ genes_in_key_fams <- function(
     x <- x[1:top_comparisons, ]
   }
 
-  x_fams_a <- list()
-  x_comparison_modules <- data.frame( # rethink the name of this
-    id = "none",
-    module = "none"
-  )
-  x_fams_b <- list()
-
-  for (i in 1:nrow(x)){ # for each instance in the stats tab; ie for each comparison
-    mod_a = x$module_a[i] # module in spp a of that comparison
-    fams_common_i <- unlist(strsplit(x$gfams_common[i], ", ")) # common fams of that comparison
-    genes_module_a <- ma$id[ma$module == mod_a] # genes of spp a in module a of that comparison
-    genes_module_a_commonfams <- genes_module_a[ #those genes
-      genes_module_a %in% # but only those in
-        f[ # the table of gene fams
-          f$gfam %in% fams_common_i,  # whose associated fam is among the common ones
-          2 # column 2 for the genes
-        ]
-    ]
-    x_fams_a[[i]] <- genes_module_a_commonfams
-    x_comparison_modules <- rind(
-      x_comparison_modules,
-      data.frame(
-        id = genes_module_a_commonfams , 
-        module = paste(
-          x$module_a[i],
-          x$module_b[i],
-          sep = "__"
-        )
-      )
-    )
-
-    mod_b = x$module_b[i]
-    fams_common_i <- unlist(strsplit(x$gfams_common[i], ", "))
-    genes_module_b <- mb$id[mb$module == mod_b]
-    genes_module_b_commonfams <- genes_module_b[
-      genes_module_b %in% 
-        f[
-          f$gfam %in% fams_common_i, 
-          2 # column containing the genes
-        ]
-    ]
-    x_fams_b[[i]] <- genes_module_b_commonfams
+  # Analysis of COMMON fams
+  if (common == TRUE ) {
+    key_genes_in_common_fams() # will this work and return the lists at the end?
   }
 
-  names(x_fams_a) <- paste(
-    x$module_a,
-    x$module_b,
-    sep = "__" # this will allow easier parsing
-    )
-
-   names(x_fams_b) <- paste(
-    x$module_a,
-    x$module_b,
-    sep = "__" # this will allow easier parsing
-    )
-  
-  #' ... Alternatively, one might say that this is abt gene 
-  #' families now and not the info on a particular species.
-  #' Meaning it is necessary a prior analysis of COG and
-  #' stuff for EVERY gene family and then subset that
-  #' analysis to speak about the particular gene families?
-  
-  #gene age bar/pieplot
-  #barplot; check which one looks better . maybe a grid of pie charts?
-  #maybe a grid of piecharts of ALL the comparisons and only in color/highlighted those that are significant?? does Heatmap() allow this?
-  barplot( 
-    table(
-      x_comparison_modules$module
-    ),
-    las = 2
-  )
-
-  #gene age enrichment (barplot of FC up--down )
-  commonfams_age <- gene_age_enrichment(
-    x_modules = x_comparison_modules,
-    x_age = ga,
-    phylostrata = phylostrata,
-
-  )
-  #heatmap of %orthogroups per gene age of relevance
-
-  
-  #cog_enrichment
-  x_fams_a_COGs <- cog_enrichment_analysis(
-    x_modules = x_comparison_modules,
-    x_cog = a_cogs,
-    specific_cogs = specific_cos
-  )
-
-
-  
-  #topgo
-  x_fams_a_GOs <- list()
-  for (i in 1:nrow(x_fams_a)){
-    x_fams_a_GOs[[i]] <- getGOs(x_fams_a[[i]],gene_universe = universe)
+  # Analysis of EXCLUSIVE fams
+  if (exclusive == TRUE ) {
+    key_genes_in_exclusive_fams() # will this work and return the lists at the end?
   }
 
+  # return outputs
   return(x_fams_a)
 }
