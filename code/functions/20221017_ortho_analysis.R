@@ -433,11 +433,13 @@ genes_in_key_fams <- function(
 
   
   #cog_enrichment
-  x_fams_a_COGs <- cog_enrichment(
+  x_fams_a_COGs <- cog_enrichment_analysis(
     x_modules = x_comparison_modules,
     x_cog = a_cogs,
     specific_cogs = specific_cos
   )
+
+
   
   #topgo
   x_fams_a_GOs <- list()

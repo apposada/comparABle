@@ -1,7 +1,15 @@
 ### gene age enrichments
 #' function to calculate gene age enrichment for list  of N group of genes x J 
 #' gene ages or phylostrata. From Andrej Ondracka and A.Perez-Posada ca. 2018
-#' 
+#'
+
+require(ComplexHeatmap)
+require(circlize)
+require(colorRamp2)
+require(ggplot2)
+require(dplyr)
+
+
 gene_age_enrichment <- function(
     x_modules, x_age, phylostrata = FALSE, fisher_pval = 0.05
     ) {
@@ -21,13 +29,19 @@ gene_age_enrichment <- function(
         )
     ))
 
-    pvalmat <- matrix(
+    quantmat <- matrix(
+        rep(0,times = length(modules)*length(cogs)),
+        nrow = length(modules),
+        ncol = length(cogs)
+    )
+
+    enrichmat <- matrix(
         rep(1,times = length(modules)*length(ages)),
         nrow = length(modules),
         ncol = length(ages)
     )
 
-    enrichmat <- matrix(
+    pvalmat <- matrix(
         rep(1,times = length(modules)*length(ages)),
         nrow = length(modules),
         ncol = length(ages)
@@ -48,6 +62,8 @@ gene_age_enrichment <- function(
                 nrow = 2
             )
 
+            quantmat[h,n] <- contingency[1,1] # of cog j genes in module i
+
             enrichmat[h,n] <- 100 * # percent
             (
                 contingency[1,1]/(contingency[2,1] + contingency[1,1]) -
@@ -58,8 +74,11 @@ gene_age_enrichment <- function(
         }
     }
 
+    quantdf <- as.data.frame(quantmat)
+    colnames(quantdf) <- ages; rownames(quantdf) <- modules
+
     enrichdf <- as.data.frame(enrichmat)
-    colnames(enrichdf) <- ages; rownames(enrichdf) <-  modules
+    colnames(enrichdf) <- ages; rownames(enrichdf) <- modules
 
     pvaldf <- as.data.frame(pvalmat)
     colnames(pvaldf) <- ages ; rownames(pvaldf) <- modules
@@ -75,11 +94,14 @@ gene_age_enrichment <- function(
         column_names_side = "top",
         cell_fun = function(j,i,x,y,width,height,fill){
             if(as.matrix(pvaldf)[i,j] < fisher_pval)
-            grid.text("*", x, y, gp = gpar(fontsize = 15)) # add asterisk if p < .05
+            grid.text(
+                "*", x, y, gp = gpar(fontsize = 15)
+                ) # add asterisk if p < .05
             }
     )
 
     res <- list(
+        AgeperModule = quantdf,
         enrichment = enrichdf,
         pvalue = pvaldf,
         heatmap = geneage_ht
