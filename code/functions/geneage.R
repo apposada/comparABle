@@ -34,15 +34,15 @@ gene_age_enrichment <- function(
     )
 
     for (i in modules) {
-        h <- which(modules = = i)
+        h <- which(modules == i)
         for (j in ages) {
-            n <- which(ages = = j)
+            n <- which(ages == j)
 
             contingency <- matrix(
                 c(
-                    sum(x_module_age$module = = i & x_module_age$age = = j),
-                    sum(x_module_age$module = = i & x_module_age$age ! = j),
-                    sum(x_module_age$module ! = i & x_module_age$age = = j),
+                    sum(x_module_age$module == i & x_module_age$age == j),
+                    sum(x_module_age$module == i & x_module_age$age ! = j),
+                    sum(x_module_age$module ! = i & x_module_age$age == j),
                     sum(x_module_age$module ! = i & x_module_age$age ! = j)
                     ),
                 nrow = 2
@@ -74,7 +74,7 @@ gene_age_enrichment <- function(
         row_names_side = "left",
         column_names_side = "top",
         cell_fun = function(j,i,x,y,width,height,fill){
-            if(as.matrix(pvaldf)[i,j] < 0.05)
+            if(as.matrix(pvaldf)[i,j] < fisher_pval)
             grid.text("*", x, y, gp = gpar(fontsize = 15)) # add asterisk if p < .05
             }
     )

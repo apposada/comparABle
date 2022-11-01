@@ -312,8 +312,7 @@ comparemodules <- function(ma, mb, f){
 #' a gene age enrichment. Perhaps also a gene ontology to
 #' see the roles of such families. Or COG.
 genes_in_key_fams <- function(
-  stats, f, age, ma, mb, module_a = FALSE, module_b = FALSE, top_comparisons = 10
-){
+  stats, f, age, ma, mb, module_a = FALSE, module_b = FALSE, top_comparisons = 10, ... ){
   #' The proper way to do this is, taking the exact genes
   #' from that module based on what gene families they
   #' are from.
@@ -426,13 +425,19 @@ genes_in_key_fams <- function(
   #gene age enrichment (barplot of FC up--down )
   commonfams_age <- gene_age_enrichment(
     x_modules = x_comparison_modules,
-    x_age = 
+    x_age = ga,
+    phylostrata = phylostrata,
+
   )
   #heatmap of %orthogroups per gene age of relevance
 
   
   #cog_enrichment
-  
+  x_fams_a_COGs <- cog_enrichment(
+    x_modules = x_comparison_modules,
+    x_cog = a_cogs,
+    specific_cogs = specific_cos
+  )
   
   #topgo
   x_fams_a_GOs <- list()
