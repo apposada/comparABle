@@ -19,3 +19,14 @@ plot_pca_ab <- function(pca,ab_o){
     cex = 0.7
   )
 }
+
+#' Functions for heatmaps of species A and B, ideally a color annotation of
+#' purple and green for the correlations, the orthology strategy, etc.
+#' 
+#' Functions for gene age enrichment (probably change the colours used in
+#' that analysis from purplegreen to something else to avoid overlap with
+#' species notation)
+#' 
+#' Functions for gene age barplot for each species
+#' 
+#' Functions for plotting of COGs per species; bot barplots, heatmaps, pies

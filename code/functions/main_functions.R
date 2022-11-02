@@ -345,7 +345,6 @@ genes_in_key_fams <- function(
   #' common gfams. THEN you can do GO analysis, COG, and
   #' gene age...
   
-  # stats <- modulecomp_ab$stats
   stats$hypgeom_log <- as.numeric(stats$hypgeom_log)
   top_comparisons = 10
   if( (module_a ! =  F) & (module_b ! =  F)){
