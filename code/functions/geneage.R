@@ -5,7 +5,6 @@
 
 require(ComplexHeatmap)
 require(circlize)
-require(colorRamp2)
 require(ggplot2)
 require(dplyr)
 
@@ -15,7 +14,7 @@ gene_age_enrichment <- function(
     ) {
 
     modules <- sort(unique(x_modules$module))
-    if (phylostrata ! = FALSE) {
+    if (phylostrata != FALSE) {
         ages <- sort(unique(phylostrata)) # must have numerics at the beginning
     } else {
         ages <- sort(unique(x_age$age)) # must have numerics at the beginning
@@ -55,9 +54,9 @@ gene_age_enrichment <- function(
             contingency <- matrix(
                 c(
                     sum(x_module_age$module == i & x_module_age$age == j),
-                    sum(x_module_age$module == i & x_module_age$age ! = j),
-                    sum(x_module_age$module ! = i & x_module_age$age == j),
-                    sum(x_module_age$module ! = i & x_module_age$age ! = j)
+                    sum(x_module_age$module == i & x_module_age$age != j),
+                    sum(x_module_age$module != i & x_module_age$age == j),
+                    sum(x_module_age$module != i & x_module_age$age != j)
                     ),
                 nrow = 2
             )

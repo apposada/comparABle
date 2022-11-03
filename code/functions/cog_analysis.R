@@ -3,7 +3,6 @@
 
 require(ComplexHeatmap)
 require(circlize)
-require(colorRamp2)
 require(ggplot2)
 require(dplyr)
 
@@ -12,7 +11,7 @@ require(dplyr)
 #' 
 cog_enrichment_analysis <- function(x_modules, x_cog, specific_cogs = FALSE, fisher_pval = 0.05) {
     modules <- sort(unique(x_modules$module))
-    if (specific_cogs ! = FALSE) {
+    if (specific_cogs != FALSE) {
         cogs <- sort(unique(specific_cogs)) # must have numerics at the beginning
     } else {
         cogs <- sort(unique(x_cog$cog)) # must have numerics at the beginning
@@ -52,9 +51,9 @@ cog_enrichment_analysis <- function(x_modules, x_cog, specific_cogs = FALSE, fis
             contingency <- matrix(
                 c(
                     sum(x_module_cog$module == i & x_module_cog$cog == j),
-                    sum(x_module_cog$module == i & x_module_cog$cog ! = j),
-                    sum(x_module_cog$module ! = i & x_module_cog$cog == j),
-                    sum(x_module_cog$module ! = i & x_module_cog$cog ! = j)
+                    sum(x_module_cog$module == i & x_module_cog$cog != j),
+                    sum(x_module_cog$module != i & x_module_cog$cog == j),
+                    sum(x_module_cog$module != i & x_module_cog$cog != j)
                     ),
                 nrow = 2
             )
@@ -97,7 +96,7 @@ cog_enrichment_analysis <- function(x_modules, x_cog, specific_cogs = FALSE, fis
             }
     )
 
-    if( plotting = TRUE ){
+    if( plotting == TRUE ){
     #    barplot(cogdata_table$freq, col = col_cogs)
     #    pie(cogdata_table$freq, col = col_cogs)
     }

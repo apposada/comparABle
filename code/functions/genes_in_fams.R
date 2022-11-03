@@ -146,8 +146,9 @@ key_genes_in_exclusive_fams <- function(...){
                 x$module_a[i],
                 x$module_b[i],
                 sep = "__"
+                )
             )
-            )
+        )
 
         mod_b = x$module_b[i] # module in spp a of that comparison
         fams_i_b_excl <- unlist(strsplit(x$gfams_common[i], ", ")) # common fams of that comparison
@@ -170,7 +171,6 @@ key_genes_in_exclusive_fams <- function(...){
                 sep = "__"
             )
             )
-
         )
     }
 
@@ -233,11 +233,14 @@ key_genes_in_exclusive_fams <- function(...){
     x_fams_a_exclusive_GOs <- list()
     for (i in 1:nrow(x_fams_a_exclusive)){
     x_fams_a_exclusive_GOs[[i]] <- getGOs(x_fams_a_exclusive[[i]],gene_universe = universe_a)
+    }
+    
     x_fams_b_exclusive_GOs <- list()
     for (i in 1:nrow(x_fams_b_exclusive)){
     x_fams_b_exclusive_GOs[[i]] <- getGOs(x_fams_b_exclusive[[i]],gene_universe = universe_b)
     }
-
+    
+    #Results
     res_excl_a = list(
         table_a_exclusive = x_comparison_modules_a_exclusive,
         list_a_exclusive = x_fams_a_exclusive,

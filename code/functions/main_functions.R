@@ -106,9 +106,9 @@ treeFromEnsembleClustering <- function(
   require(ape)
   ensemble_hc = vector(mode = "list", length = n)
   hs <- rep(h, n)[1:n]
-  if (clustering_algorithm =  = "hclust") {
+  if (clustering_algorithm == "hclust") {
     for (i in 1:n) { 
-      if (bootstrap =  = TRUE) p = 1
+      if (bootstrap == TRUE) p = 1
       ids = sample(vargenes, p*length(vargenes), replace = bootstrap)
       hc = hclust(as.dist(1-cor(
         x[ids, ], method = cor_method
@@ -116,9 +116,9 @@ treeFromEnsembleClustering <- function(
       hc$height <- round(hc$height, 6)
       ensemble_hc[[i]] = cutree(hc, h = hs[i])
     }
-  } else if (clustering_algorithm =  = "nj") {
+  } else if (clustering_algorithm == "nj") {
     for (i in 1:n) {
-      if (bootstrap =  = TRUE) p = 1
+      if (bootstrap == TRUE) p = 1
       ids = sample(vargenes, p*length(vargenes), replace = bootstrap)
       hc = as.hclust(force.ultrametric(root(nj(as.dist(1-cor(
         x[ids, ], method = cor_method
@@ -133,15 +133,15 @@ treeFromEnsembleClustering <- function(
     for (j in 1:ncol(x)) {
       if (!i<j) {
         a = colnames(x)[i]; b = colnames(x)[j]
-        cooc = sum(unlist(lapply(ensemble_hc, function(el) el[a] =  = el[b])))
+        cooc = sum(unlist(lapply(ensemble_hc, function(el) el[a] == el[b])))
         coocmat[i, j] = cooc
         coocmat[j, i] = cooc
       }
     }
   }
-  if (clustering_algorithm =  = "hclust") {
+  if (clustering_algorithm == "hclust") {
     tree = as.phylo(hclust(dist(coocmat), method = clustering_method))
-  } else if (clustering_algorithm =  = "nj") {
+  } else if (clustering_algorithm == "nj") {
     tree = as.phylo(nj(dist(coocmat)))
   }
   return(list(
@@ -347,7 +347,7 @@ genes_in_key_fams <- function(
   
   stats$hypgeom_log <- as.numeric(stats$hypgeom_log)
   top_comparisons = 10
-  if( (module_a ! =  F) & (module_b ! =  F)){
+  if( (module_a !=  F) & (module_b !=  F)){
     x <- stats[
       stats$module_a == module_a & stats$module_b == module_b, 
     ]
