@@ -5,34 +5,40 @@
 
 require(ComplexHeatmap)
 require(circlize)
-require(colorRamp2)
 require(ggplot2)
 require(dplyr)
-
+#' 
+#' @param x_modules association file between genes -- modules/categories/clusters...
+#' @param x_cog association file between genes -- COG categories (any category)
+#' @param specific_cogs either FALSE or vector of specific COGs to be tested
+#' @param fisher_pval minimum pvalue to consider significant in the heatmap visualisation
+#' @param potting whether to plot the heatmap or not
+#' @param functional_categories either FALSE or a table with alternative names for COG categories
+#' 
 
 gene_age_enrichment <- function(
     x_modules, x_age, phylostrata = FALSE, fisher_pval = 0.05
     ) {
 
     modules <- sort(unique(x_modules$module))
-    if (phylostrata ! = FALSE) {
+    if (phylostrata != FALSE) {
         ages <- sort(unique(phylostrata)) # must have numerics at the beginning
     } else {
         ages <- sort(unique(x_age$age)) # must have numerics at the beginning
     }
 
-    x_module_age <- sort(unique(
+    x_module_age <- unique(
         merge(
             x_modules,
             x_age,
             by = 1
         )
-    ))
+    )
 
     quantmat <- matrix(
-        rep(0,times = length(modules)*length(cogs)),
+        rep(0,times = length(modules)*length(ages)),
         nrow = length(modules),
-        ncol = length(cogs)
+        ncol = length(ages)
     )
 
     enrichmat <- matrix(
@@ -55,9 +61,9 @@ gene_age_enrichment <- function(
             contingency <- matrix(
                 c(
                     sum(x_module_age$module == i & x_module_age$age == j),
-                    sum(x_module_age$module == i & x_module_age$age ! = j),
-                    sum(x_module_age$module ! = i & x_module_age$age == j),
-                    sum(x_module_age$module ! = i & x_module_age$age ! = j)
+                    sum(x_module_age$module == i & x_module_age$age != j),
+                    sum(x_module_age$module != i & x_module_age$age == j),
+                    sum(x_module_age$module != i & x_module_age$age != j)
                     ),
                 nrow = 2
             )
@@ -84,12 +90,19 @@ gene_age_enrichment <- function(
     colnames(pvaldf) <- ages ; rownames(pvaldf) <- modules
     pvaldf[pvaldf > fisher_pval ] <- 1 # clipped
 
+    col_age <- colorRamp2(
+        breaks = c(seq(-20,-0.1,length = 19),0,seq(0.1,20,length = 20)),
+        colors = c(
+            colorRampPalette(c("#440154","white"))(20)[1:19],
+            colorRampPalette(c("white","#21908C"))(21)
+            )
+        )
     geneage_ht <- Heatmap(
         name = "Gene age\nEnrichment",
         as.matrix(enrichdf),
         cluster_columns = FALSE,
         cluster_rows = FALSE,
-        col = colorRampPalette(c("#440154","white","#21908C"))(20),
+        col = col_age,
         row_names_side = "left",
         column_names_side = "top",
         cell_fun = function(j,i,x,y,width,height,fill){
@@ -110,6 +123,7 @@ gene_age_enrichment <- function(
 
     return(res)
 }
+
 
 #' 
 #' It would be useful to have a phylostrata dataset not only

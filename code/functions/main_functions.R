@@ -1,3 +1,4 @@
+### comparABle
 #' Functions Comparisons across species
 #' 
 #' Core (essential minimum) input data:
@@ -106,9 +107,9 @@ treeFromEnsembleClustering <- function(
   require(ape)
   ensemble_hc = vector(mode = "list", length = n)
   hs <- rep(h, n)[1:n]
-  if (clustering_algorithm =  = "hclust") {
+  if (clustering_algorithm == "hclust") {
     for (i in 1:n) { 
-      if (bootstrap =  = TRUE) p = 1
+      if (bootstrap == TRUE) p = 1
       ids = sample(vargenes, p*length(vargenes), replace = bootstrap)
       hc = hclust(as.dist(1-cor(
         x[ids, ], method = cor_method
@@ -116,9 +117,9 @@ treeFromEnsembleClustering <- function(
       hc$height <- round(hc$height, 6)
       ensemble_hc[[i]] = cutree(hc, h = hs[i])
     }
-  } else if (clustering_algorithm =  = "nj") {
+  } else if (clustering_algorithm == "nj") {
     for (i in 1:n) {
-      if (bootstrap =  = TRUE) p = 1
+      if (bootstrap == TRUE) p = 1
       ids = sample(vargenes, p*length(vargenes), replace = bootstrap)
       hc = as.hclust(force.ultrametric(root(nj(as.dist(1-cor(
         x[ids, ], method = cor_method
@@ -133,15 +134,15 @@ treeFromEnsembleClustering <- function(
     for (j in 1:ncol(x)) {
       if (!i<j) {
         a = colnames(x)[i]; b = colnames(x)[j]
-        cooc = sum(unlist(lapply(ensemble_hc, function(el) el[a] =  = el[b])))
+        cooc = sum(unlist(lapply(ensemble_hc, function(el) el[a] == el[b])))
         coocmat[i, j] = cooc
         coocmat[j, i] = cooc
       }
     }
   }
-  if (clustering_algorithm =  = "hclust") {
+  if (clustering_algorithm == "hclust") {
     tree = as.phylo(hclust(dist(coocmat), method = clustering_method))
-  } else if (clustering_algorithm =  = "nj") {
+  } else if (clustering_algorithm == "nj") {
     tree = as.phylo(nj(dist(coocmat)))
   }
   return(list(
@@ -181,6 +182,11 @@ commongenes_cor <- function(
 #' using a binomial statistical test and/or a hypergeometric test.
 #' comparemodules(ma, mb, f, ga, gb) --> list(a_f, b_f, ma_f, mb_f, 
 #' matrix_hypgeom, matrix_binomial, age_common, age_exclusive)
+#' 
+#' @param ma association file genes sp a -- gene modules
+#' @param mb association file genes sp b -- gene modules
+#' @param f association file for gene spp a,b -- gene family
+#' 
 comparemodules <- function(ma, mb, f){
   fam_of = function(x) {f$gfam[f$id == x]} # lookup function to grab the family of a given gene
   gimme_fams = function(x) { # x is a set of gene names. is this function slow?
@@ -290,7 +296,7 @@ comparemodules <- function(ma, mb, f){
   fon <- fon[!(fon$module_a == "none"), ]
   fon$hypgeom_pval <- as.numeric(fon$hypgeom_pval)
   fon$hypgeom_log <- as.numeric(fon$hypgeom_log)
-  fon$hypgeom_binom <- as.numeric(fon$hypgeom_binom)
+  fon$binom_pval <- as.numeric(fon$binom_pval)
   
   loghypg <- -log(PVS)
   loghypg[loghypg > 30] <- 30
@@ -320,8 +326,34 @@ comparemodules <- function(ma, mb, f){
 #' also grabs the modules from that comparison and performs
 #' a gene age enrichment. Perhaps also a gene ontology to
 #' see the roles of such families. Or COG.
+#' 
+#' @param stats data frame output from compare_modules, min format:
+#' module_a -- module_b -- pvalue hypgeom -- common gfams -- exclusive gfams
+#' @param f association file for gene spp a,b -- gene family
+#' @param ma association file genes sp a -- gene modules
+#' @param mb association file genes sp b -- gene modules
+#' @param top_comparisons number of comparisons to analyse
+#' @param common boolean indicating whether to analyse common gfams or not
+#' @param exclusive boolean indicating whether to analyse exclusive gfams or not
+#' @param same_species boolean indicating if it is intramodular comparisons
+#' @param age association file genes sp a -- gene modules
+#' @param age_a association file genes sp a -- gene age
+#' @param cog_a association file genes sp a -- COG category
+#' @param gene2go_a geneID2GO annotation file for GO enrichment (topGO) in sp a
+#' @param age_b association file genes sp b -- gene age
+#' @param cog_b association file genes sp b -- COG category
+#' @param gene2go_b geneID2GO annotation file for GO enrichment (topGO) in sp b
+#' @param universe_a gene universe for species a in GO enrichment (topGO)
+#' @param universe_b gene universe for species a in GO enrichment (topGO)
+#' 
+#' 
 genes_in_key_fams <- function(
-  stats, f, age, ma, mb, module_a = FALSE, module_b = FALSE, top_comparisons = 10, common = TRUE, exclusive = FALSE , ... ){
+  stats, f, age_a, ma, mb, module_a = FALSE, module_b = FALSE, # add which metric: hypgeom or binomial
+  top_comparisons = 10, common = TRUE, exclusive = FALSE , 
+  age_b, cog_a, cog_b, same_species = FALSE, 
+  gene2go_a, gene2go_b, universe_a, universe_b, universe, 
+   ...
+  ){
   #' The proper way to do this is, taking the exact genes
   #' from that module based on what gene families they
   #' are from.
@@ -346,8 +378,8 @@ genes_in_key_fams <- function(
   #' gene age...
   
   stats$hypgeom_log <- as.numeric(stats$hypgeom_log)
-  top_comparisons = 10
-  if( (module_a ! =  F) & (module_b ! =  F)){
+  
+  if( (module_a !=  F) & (module_b !=  F)){
     x <- stats[
       stats$module_a == module_a & stats$module_b == module_b, 
     ]
@@ -355,19 +387,47 @@ genes_in_key_fams <- function(
     x <- stats[
       rev(order(stats$hypgeom_log)), 
     ]
+    if( same_species != FALSE ) {
+      x <- x[x$module_a != x$module_b,] # this is for plei, same species, same modules... this needs to be implemented somehow
+    }
     x <- x[1:top_comparisons, ]
   }
 
   # Analysis of COMMON fams
   if (common == TRUE ) {
-    key_genes_in_common_fams() # will this work and return the lists at the end?
+    keygenes_commonfams <- key_genes_in_common_fams(
+      stats = x, ga = ga, universe = universe,
+      gene2go_a = gene2go_a, cog_a = cog_a, ma = ma, mb = mb )
   }
 
   # Analysis of EXCLUSIVE fams
   if (exclusive == TRUE ) {
-    key_genes_in_exclusive_fams() # will this work and return the lists at the end?
+    keygenes_exclusivefams <- key_genes_in_exclusive_fams(
+      stats = x, ga = ga, gb = gb, universe_a = universe_a,
+      universe_b = universe_b, gene2go_a = gene2go_a,
+      gene2go_b = gene2go_b, cog_a = cog_a, b_cogs = b_cogs,
+      ma = ma , mb = mb )
   }
-
+  
+  # Organise results
+  
+  if( common == TRUE ){
+    
+    if (exclusive == TRUE) {
+      
+      res <- list(
+        commonfams = keygenes_commonfams,
+        exclusivefams = keygenes_exclusivefams
+      )
+      
+    }
+    
+    res <- list(
+      commonfams = keygenes_commonfams
+    )
+    
+  }
+  
   # return outputs
-  return(x_fams_a)
+  return(res)
 }
