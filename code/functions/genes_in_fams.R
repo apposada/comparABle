@@ -1,4 +1,4 @@
-key_genes_in_common_fams <- function(...){
+key_genes_in_common_fams <- function(...){ #IMPORTANT CAVEAT SEE BELOW
     x_fams_a <- list()
     x_comparison_modules <- data.frame( # rethink the name of this
     id = "none",
@@ -72,11 +72,12 @@ key_genes_in_common_fams <- function(...){
     )
 
     #gene age enrichment (barplot of FC up--down )
+    # IMPORTANT: this MUST be reimplemented because at the moment it is performing comparisons of enrichment BETWEEN the genes common across pair of modules, not of every set of common genes against the whole gene set of organism a or against the set of all genes in module x of species a. Perhaps the latter is more informative.
     commonfams_age <- gene_age_enrichment(
+        # perhaps this should be replaced for another function that retrieves the gene age enrichment between element i in the list of genes/modules, against a certain set of genes (user defined, or both: all genes of a, and on the other side all genes of a belonging to module of interest)
     x_modules = x_comparison_modules,
     x_age = ga,
-    phylostrata = phylostrata,
-
+    phylostrata = phylostrata
     )
 
     #heatmap of %orthogroups per gene age of relevance
@@ -84,7 +85,9 @@ key_genes_in_common_fams <- function(...){
     #' Will implement in the future
 
     #cog_enrichment
+    # IMPORTANT: this MUST be reimplemented because at the moment it is performing comparisons of enrichment BETWEEN the genes common across pair of modules, not of every set of common genes against the whole gene set of organism a or against the set of all genes in module x of species a. Perhaps the latter is more informative.
     x_fams_a_COGs <- cog_enrichment_analysis(
+    # same as above
     x_modules = x_comparison_modules,
     x_cog = a_cogs,
     specific_cogs = specific_cos
