@@ -277,8 +277,8 @@ comparABle <- function(
       pairwise_module_comparison = modulecomp_ab,
       genes_in_common_fams = ab_common_genes_details
     ),
-    plots = list( # these functions will NOT work outside the function call I think...
-      pca = ab_pc(),
+    plots = list( # these functions will NOT work outside the function call I think... possible fix: make them store the data they plot
+      pca = ab_pca(),
       spearman_cor = ab_spearman,
       pearson_cor = ab_pearson,
       jensen_shannon = ab_jsd,
