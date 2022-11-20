@@ -68,12 +68,12 @@ mergedata <- function(a, b, o) {
 rawcorsp <- function(a_o, b_o){ # make one for TFs or genes of interest
   pe <- cor(a_o, b_o, m = "pe")
   sp <- cor(a_o, b_o, m = "sp")
-  # je <- jsd(a_o, b_o)
+  js <- jsd(a_o, b_o)
   
   res <- list(
     pe = pe, 
-    sp = sp#, 
-    # je = jsd
+    sp = sp, 
+    js = js
   )
   return(res)
 }
@@ -173,6 +173,26 @@ commongenes_cor <- function(
     )
   }
   res <- res[res$cor > min_cor, ]
+  expr <- merge(
+    t(scale(t(log(ab_o[
+      rownames(ab_o) %in% res$id,
+      colnames(ab_o) %in% 
+        across_a
+    ]+1)))),
+    t(scale(t(log(ab_o[
+      rownames(ab_o) %in% res$id,
+      colnames(ab_o) %in% 
+        across_b
+    ]+1)))),
+    by = 0
+  )
+  res <- merge(
+    res,
+    expr,
+    by.x = 1,
+    by.y = 1,
+    all.x = TRUE
+  )
   #add option to include the original names in spp A and B
   return(res)
 }
@@ -397,7 +417,8 @@ genes_in_key_fams <- function(
   if (common == TRUE ) {
     keygenes_commonfams <- key_genes_in_common_fams(
       stats = x, ga = ga, universe = universe,
-      gene2go_a = gene2go_a, cog_a = cog_a, ma = ma, mb = mb )
+      gene2go_a = gene2go_a, cog_a = cog_a, ma = ma, mb = mb,
+      sep = sep)
   }
 
   # Analysis of EXCLUSIVE fams
@@ -406,7 +427,7 @@ genes_in_key_fams <- function(
       stats = x, ga = ga, gb = gb, universe_a = universe_a,
       universe_b = universe_b, gene2go_a = gene2go_a,
       gene2go_b = gene2go_b, cog_a = cog_a, b_cogs = b_cogs,
-      ma = ma , mb = mb )
+      ma = ma , mb = mb, sep = sep)
   }
   
   # Organise results

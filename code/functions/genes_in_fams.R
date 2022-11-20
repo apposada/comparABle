@@ -63,17 +63,6 @@ key_genes_in_common_fams <- function(stats, ma, mb, ga, universe_a, gene2go_a, c
     #' stuff for EVERY gene family and then subset that
     #' analysis to speak about the particular gene families?
     
-    #gene age bar/pieplot
-    #barplot; check which one looks better . maybe a grid of pie charts?
-    #maybe a grid of piecharts of ALL the comparisons and only in color/highlighted those that are significant?? does Heatmap() allow this?
-    barplot( # 
-        table(
-            x_comparison_modules$module
-        ),
-        las = 2,
-        horiz = T
-    )
-    
     #gene age enrichment (barplot of FC up--down )
     # IMPORTANT: this MUST be reimplemented because at the moment it is performing comparisons of enrichment BETWEEN the genes common across pair of modules, not of every set of common genes against the whole gene set of organism a or against the set of all genes in module x of species a. Perhaps the latter is more informative.
     commonfams_age <- gene_age_enrichment(
