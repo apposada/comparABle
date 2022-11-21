@@ -250,13 +250,14 @@ comparemodules <- function(ma, mb, f){
   for (i in 1:length(ma_list)){ #need to dramatically optimise speed
     
     a_modulei_name <- names(ma_list[i])
-    a_modulei_genes <- ma_list[[i]]
+    a_modulei_genes <- ma_list[[i]] # from here, a bit later down below, grab the genes that belong to gene families in common with species b
     a_fams <- gimme_fams(a_modulei_genes) #is this slow?
     
     for (j in 1:length(mb_list)){
       
       b_modulej_name <- names(mb_list[j])
-      b_modulej_genes <- mb_list[[j]]
+      b_modulej_genes <- mb_list[[j]] # from here, a bit later down below, grab the genes that belong to gene families in common with species a
+    a_fams <- gimme_fams(a_modulei_genes) #is this slow?
       b_fams <- gimme_fams(b_modulej_genes) #is this slow?
       
       sample_size <- length(a_fams)
@@ -296,10 +297,12 @@ comparemodules <- function(ma, mb, f){
             -log(hypg), as.numeric(binom), common_fams, # add here which are the names of the gfams enriched.
             exclusive_fams_a, # exclusive fams in a
             exclusive_fams_b # exclusive fams in b
+            # add here four more columns: "a" genes in common fams, "a" genes in exclusive fams, "b" genes in common fams, "b" genes in exclusive fams
             )
         )
-      } else {
+      } else { # if no common gfams found, report these pvals as 1
         hypg <- 1
+        binom <- 1
       }
       
       PVS[i, j] <- hypg
@@ -338,6 +341,9 @@ comparemodules <- function(ma, mb, f){
 
 
 #' Second part of comparemodules.
+#' 
+#' IMPORTANT HERE AS WELL; REVISE. MUCH FEWER GENES IN THE SETS THAN EXPECTED.
+#' 
 #' genes_in_key_fams: Function to retrieve and visualize the enriched
 #' gene families by doing gene age enrichment/visualisation;
 #' basically it takes the fon table, grab the most significant
