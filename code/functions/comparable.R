@@ -21,9 +21,12 @@ comparABle <- function(
   cooc_p = 0.1,
   cooc_vargenes = rownames(merge_ab$ab_o),
   highlyvariable = TRUE,
+  common = TRUE,
+  exclusive = FALSE,
+  age_nodes,
   ...
   ) {
-  
+
   # TidyUp
   print("Tidy up data")
   samples_a = levels(condition_x)
@@ -33,7 +36,7 @@ comparABle <- function(
   a = qnorm(a)
   a = tidyup(a, highlyvariable = highlyvariable) # remove genes with 0 tpms
   a = rep2means(samples_a,a)
-  
+
   if (any(apply(b,2,is.character)) == TRUE) {
     b = b[,!(sapply(b, is.character))]
   }
@@ -41,23 +44,23 @@ comparABle <- function(
   b = qnorm(b)
   b = tidyup(b, highlyvariable = highlyvariable)
   b = rep2means(samples_b,b) # remove genes with 0 tpms
-  
+
   o = pair2id(o)
-  
+
   colnames(ma) <- c("id","module")
   colnames(mb) <- c("id","module")
-  
+
   # MERGE
   print ("Merge data")
   merge_ab <- mergedata(a,b,o)
-  
+
   # CORRELATIONS
   print("Correlations")
   cors <- rawcorsp(merge_ab$a_o,merge_ab$b_o) # FIX JSD
-  
+
   print("PCA")
   pi <- prcomp(t(merge_ab$ab_o))
-  
+
   # CO-OCCURENCE MATRIX
   print("Co-Occurrence")
   set.seed(4343)
@@ -66,7 +69,7 @@ comparABle <- function(
     clustering_algorithm=cooc_clustering_algorithm, clustering_method=cooc_clustering_method, 
     cor_method=cor_method
   )
-  
+
   # Co-occurrence heatmap
   cooc_hm <- Heatmap(
     cooc$cooccurrence,
@@ -79,10 +82,10 @@ comparABle <- function(
       colors=c(
         c("white",'#ffffe5','#fff7bc','#fee391','#fec44f','#fe9929','#ec7014','#cc4c02','#990000')
       )
-    ), 
-    name="co-occurence"
+    ),
+    name = "co-occurence"
   )
-  
+
   # COMMON GENES IN CORRELATIONS
   print("Common genes in Correlations")
   # This should be determined autommatically ... or with an "if (stages_hicor are known) {} else {} ..."
@@ -92,20 +95,22 @@ comparABle <- function(
     across_b = across_b,
     min_cor = 0.8
     )
-  
+
   ab_common_genes_cor <- merge(
     ab_common_genes_cor,
     o,
     by = 1
   )
-  
+
+  # eventually this must be deprecated in favor of treeGapGenes from Stylophora paper...
+
   print("Common genes in Correlations (GO)")
   ab_common_genes_cor_GOs <- getGOs(
     genelist = list(a = ab_common_genes_cor$a),
     gene_universe = pfla_all_gene_names,
     gene2GO = pfla_geneID2GO
     )
-  
+
   print("Common genes in Correlations (age)")
   ab_common_genes_cor_age <- gene_age_enrichment(
     x_modules = data.frame(
@@ -116,13 +121,13 @@ comparABle <- function(
         "non_common"
       )
     ),
-    x_age = ga[!(ga$age %in% c("Ambu","Hemich","Pfla_specif")),] # custom vector should be a variable of common evol.nodes
+    x_age = ga[!(ga$age %in% age_nodes),]
   )
-  
+
   # COMPARE MODULES
   print("Pairwise Orthology Overlap Strategy across modules -- hypergeometric and binonmial tests")
   modulecomp_ab <- comparemodules(ma,mb,f)
-  
+
   # Genes in key fams across modules
   print("Getting info on genes from shared families across modules")
   ab_common_genes_details <- genes_in_key_fams(
@@ -131,7 +136,7 @@ comparABle <- function(
     f = f,
     ma = ma,
     mb = mb,
-    age_a = ga[!(ga$age %in% c("Ambu","Hemich","Pfla_specif")),], # custom vector should be a variable of common evol.nodes
+    age_a = ga[!(ga$age %in% age_nodes,],
     cog_a = cog_a,
     gene2go_a = pfla_geneID2GO,
     universe_a = pfla_all_gene_names,
@@ -139,18 +144,17 @@ comparABle <- function(
     sep = ",",
     module_a = FALSE,
     module_b = FALSE,
-    common = TRUE,
-    exclusive = FALSE , 
+    common = common,
+    exclusive = exclusive, 
     same_species = FALSE
     )
-  
-  
+
   # PLOTS
   print("Plots")
   # STORE ALL PLOTS IN FUNCTIONS AS DONE BY @cartwheel ON https://stackoverflow.com/questions/29583849/save-a-plot-in-an-object
   # PCA
   ab_pca <- function(){plot_pca_ab(pca = pi,ab_o = merge_ab)}
-  
+
   # Correlation, Coocurrence
   ab_spearman <- Heatmap(
     column_title = paste0("correlation ",a_name," vs ",b_name),
@@ -160,7 +164,7 @@ comparABle <- function(
     cluster_columns = F,
     col = rev(sequential_hcl(10,"YlOrRd"))
   )
-  
+
   ab_pearson <- Heatmap(
     cors$pe,
     name = "correlation",
@@ -168,7 +172,7 @@ comparABle <- function(
     cluster_columns = F,
     col = rev(sequential_hcl(10,"YlOrRd"))
   )
-  
+
   ab_jsd <- Heatmap(
     cors$js,
     name = "correlation",
@@ -176,7 +180,7 @@ comparABle <- function(
     cluster_columns = F,
     col = rev(sequential_hcl(10,"YlOrRd"))
   )
-  
+
   ab_cooc_hm <- function() {
     heatmap(
       cooc$cooccurrence,
@@ -184,7 +188,7 @@ comparABle <- function(
       Rowv = cooc$tree$edge
     )
   }
-  
+
   # Common genes, highly correlated
   high_correlation_genes <- function(){
     par(mfrow = c(1,2))
@@ -204,25 +208,7 @@ comparABle <- function(
     )
     par(mfrow = c(1,1))
   }
-  
-  # GO terms
-  #' turn this into a GGplot, same for the whole plethora of
-  #' enriched GO terms
-  # 
-  # plot(
-  #   x = 
-  #     ab_common_genes_GOs$GOtable$a$Significant /
-  #     ab_common_genes_GOs$GOtable$a$Expected,
-  #   y = 
-  #     -log(
-  #       as.numeric(
-  #         ab_common_genes_GOs$GOtable$a$classicFisher
-  #       )
-  #     ),
-  #   xlab = "FC no. Obs/Exp genes",
-  #   ylab = "-logpvalue"
-  # )
-  # 
+
   # Age of highly cor genes
   high_correlation_genes_age <- function(){
     par(mfrow = c(1,2))
