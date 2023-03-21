@@ -68,12 +68,12 @@ mergedata <- function(a, b, o) {
 rawcorsp <- function(a_o, b_o){ # make one for TFs or genes of interest
   pe <- cor(a_o, b_o, m = "pe")
   sp <- cor(a_o, b_o, m = "sp")
-  # je <- jsd(a_o, b_o)
+  js <- jsd(a_o, b_o)
   
   res <- list(
     pe = pe, 
-    sp = sp#, 
-    # je = jsd
+    sp = sp, 
+    js = js
   )
   return(res)
 }
@@ -173,6 +173,26 @@ commongenes_cor <- function(
     )
   }
   res <- res[res$cor > min_cor, ]
+  expr <- merge(
+    t(scale(t(log(ab_o[
+      rownames(ab_o) %in% res$id,
+      colnames(ab_o) %in% 
+        across_a
+    ]+1)))),
+    t(scale(t(log(ab_o[
+      rownames(ab_o) %in% res$id,
+      colnames(ab_o) %in% 
+        across_b
+    ]+1)))),
+    by = 0
+  )
+  res <- merge(
+    res,
+    expr,
+    by.x = 1,
+    by.y = 1,
+    all.x = TRUE
+  )
   #add option to include the original names in spp A and B
   return(res)
 }
@@ -230,13 +250,14 @@ comparemodules <- function(ma, mb, f){
   for (i in 1:length(ma_list)){ #need to dramatically optimise speed
     
     a_modulei_name <- names(ma_list[i])
-    a_modulei_genes <- ma_list[[i]]
+    a_modulei_genes <- ma_list[[i]] # from here, a bit later down below, grab the genes that belong to gene families in common with species b
     a_fams <- gimme_fams(a_modulei_genes) #is this slow?
     
     for (j in 1:length(mb_list)){
       
       b_modulej_name <- names(mb_list[j])
-      b_modulej_genes <- mb_list[[j]]
+      b_modulej_genes <- mb_list[[j]] # from here, a bit later down below, grab the genes that belong to gene families in common with species a
+    a_fams <- gimme_fams(a_modulei_genes) #is this slow?
       b_fams <- gimme_fams(b_modulej_genes) #is this slow?
       
       sample_size <- length(a_fams)
@@ -276,10 +297,12 @@ comparemodules <- function(ma, mb, f){
             -log(hypg), as.numeric(binom), common_fams, # add here which are the names of the gfams enriched.
             exclusive_fams_a, # exclusive fams in a
             exclusive_fams_b # exclusive fams in b
+            # add here four more columns: "a" genes in common fams, "a" genes in exclusive fams, "b" genes in common fams, "b" genes in exclusive fams
             )
         )
-      } else {
+      } else { # if no common gfams found, report these pvals as 1
         hypg <- 1
+        binom <- 1
       }
       
       PVS[i, j] <- hypg
@@ -318,6 +341,9 @@ comparemodules <- function(ma, mb, f){
 
 
 #' Second part of comparemodules.
+#' 
+#' IMPORTANT HERE AS WELL; REVISE. MUCH FEWER GENES IN THE SETS THAN EXPECTED.
+#' 
 #' genes_in_key_fams: Function to retrieve and visualize the enriched
 #' gene families by doing gene age enrichment/visualisation;
 #' basically it takes the fon table, grab the most significant
@@ -397,7 +423,8 @@ genes_in_key_fams <- function(
   if (common == TRUE ) {
     keygenes_commonfams <- key_genes_in_common_fams(
       stats = x, ga = ga, universe = universe,
-      gene2go_a = gene2go_a, cog_a = cog_a, ma = ma, mb = mb )
+      gene2go_a = gene2go_a, cog_a = cog_a, ma = ma, mb = mb,
+      sep = sep)
   }
 
   # Analysis of EXCLUSIVE fams
@@ -406,7 +433,7 @@ genes_in_key_fams <- function(
       stats = x, ga = ga, gb = gb, universe_a = universe_a,
       universe_b = universe_b, gene2go_a = gene2go_a,
       gene2go_b = gene2go_b, cog_a = cog_a, b_cogs = b_cogs,
-      ma = ma , mb = mb )
+      ma = ma , mb = mb, sep = sep)
   }
   
   # Organise results
