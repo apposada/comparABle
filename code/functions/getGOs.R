@@ -64,7 +64,7 @@ getGOs <- function(
     res$GOtable[[j]] <- allres_x
     
     #plot
-    res$GOplot[[j]] <- barplot(
+    res$GOplot[[j]] <- list(
       height = as.vector(
         rev(
           -log(
