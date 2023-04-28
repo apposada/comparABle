@@ -13,6 +13,8 @@ comparABle <- function(
   cog_b,
   across_a,
   across_b,
+  a_samples,
+  b_samples,
   cooc_n = 1000,
   cooc_h = c(0.75,0.95),
   cooc_clustering_algorithm = "hclust",
@@ -21,30 +23,31 @@ comparABle <- function(
   cooc_p = 0.1,
   cooc_vargenes = rownames(merge_ab$ab_o),
   highlyvariable = TRUE,
-  common = TRUE,
-  exclusive = FALSE,
-  age_nodes,
+  common_evo_nodes,
+  a_universe,
+  a_id2go,
+  sep = ",\ ",
   ...
   ) {
 
   # TidyUp
   print("Tidy up data")
-  samples_a = levels(condition_x)
+  samples_a = a_samples
   if (any(apply(a,2,is.character)) == TRUE) {
     a = a[,!(sapply(a, is.character))]
   }
   a = qnorm(a)
   a = tidyup(a, highlyvariable = highlyvariable) # remove genes with 0 tpms
   a = rep2means(samples_a,a)
-
+  
   if (any(apply(b,2,is.character)) == TRUE) {
     b = b[,!(sapply(b, is.character))]
   }
-  samples_b = unique(sub("_.$", "", colnames(b)))
+  samples_b = b_samples
   b = qnorm(b)
   b = tidyup(b, highlyvariable = highlyvariable)
   b = rep2means(samples_b,b) # remove genes with 0 tpms
-
+  
   o = pair2id(o)
 
   colnames(ma) <- c("id","module")
@@ -68,22 +71,6 @@ comparABle <- function(
     x=merge_ab$ab_o, p=cooc_p, h=cooc_h,  n = cooc_n, vargenes = rownames(merge_ab$ab_o), bootstrap=FALSE,
     clustering_algorithm=cooc_clustering_algorithm, clustering_method=cooc_clustering_method, 
     cor_method=cor_method
-  )
-
-  # Co-occurrence heatmap
-  cooc_hm <- Heatmap(
-    cooc$cooccurrence,
-    col = colorRamp2(
-      c(seq(min(cooc$cooccurrence),
-            max(cooc$cooccurrence),
-            length=9
-      )
-      ),
-      colors=c(
-        c("white",'#ffffe5','#fff7bc','#fee391','#fec44f','#fe9929','#ec7014','#cc4c02','#990000')
-      )
-    ),
-    name = "co-occurence"
   )
 
   # COMMON GENES IN CORRELATIONS
@@ -121,7 +108,7 @@ comparABle <- function(
         "non_common"
       )
     ),
-    x_age = ga[!(ga$age %in% age_nodes),]
+    x_age = ga[!(ga$age %in% common_evo_nodes),]
   )
 
   # COMPARE MODULES
@@ -136,7 +123,7 @@ comparABle <- function(
     f = f,
     ma = ma,
     mb = mb,
-    age_a = ga[!(ga$age %in% age_nodes,],
+    age_a = ga[!(ga$age %in% common_evo_nodes),],
     cog_a = cog_a,
     gene2go_a = pfla_geneID2GO,
     universe_a = pfla_all_gene_names,
@@ -181,6 +168,7 @@ comparABle <- function(
     col = rev(sequential_hcl(10,"YlOrRd"))
   )
 
+  # Co-occurrence heatmap
   ab_cooc_hm <- function() {
     heatmap(
       cooc$cooccurrence,
@@ -188,6 +176,21 @@ comparABle <- function(
       Rowv = cooc$tree$edge
     )
   }
+
+  cooc_hm <- Heatmap(
+    cooc$cooccurrence,
+    col = colorRamp2(
+      c(seq(min(cooc$cooccurrence),
+            max(cooc$cooccurrence),
+            length=9
+      )
+      ),
+      colors=c(
+        c("white",'#ffffe5','#fff7bc','#fee391','#fec44f','#fe9929','#ec7014','#cc4c02','#990000')
+      )
+    ),
+    name = "co-occurence"
+  )
 
   # Common genes, highly correlated
   high_correlation_genes <- function(){

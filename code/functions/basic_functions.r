@@ -18,5 +18,9 @@ jsd <- function(a,b){
       mat[i,j] <- js(a[,i],b[,j])
     }
   }
+  
+  rownames(mat) <- colnames(a)
+  colnames(mat) <- colnames(b)
+  
   return(mat)
 }
