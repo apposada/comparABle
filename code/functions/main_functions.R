@@ -36,17 +36,17 @@ mergedata <- function(a, b, o) {
     x_o <- x_o[order(rownames(x_o)), ]
     return(x_o)
   }
-
+  
   a_o <- merge_x_o(a, o_a)
   b_o <- merge_x_o(b, o_b)
   ab_o <- merge(a_o, b_o, by = 0)
   rownames(ab_o) <- ab_o$Row.names
   ab_o <- ab_o[order(rownames(ab_o)), ]
   ab_o <- ab_o[, !sapply(ab_o, is.character)]
-
+  
   a_o <- a_o[rownames(a_o) %in% rownames(ab_o), ]
   b_o <- b_o[rownames(b_o) %in% rownames(ab_o), ]
-
+  
   res <- list(
     a_o = a_o, 
     b_o = b_o, 
@@ -103,7 +103,7 @@ treeFromEnsembleClustering <- function(
   x, n = 1000, k = NULL, h = NULL, vargenes = NULL, p = 0.75,
   bootstrap = FALSE, clustering_algorithm = "hclust",
   clustering_method = "average", cor_method = "pearson"
-  ) {
+) {
   require(ape)
   ensemble_hc = vector(mode = "list", length = n)
   hs <- rep(h, n)[1:n]
@@ -151,51 +151,164 @@ treeFromEnsembleClustering <- function(
   ))
 }
 
-#' commongenes_cor: function to retrieve highly correlating genes
-#' across equal-length periods of stages. Far from optimal;
+#' get_high_cor_genes: function to retrieve highly expressed genes
+#' across top-similar pairs of stages. Sub-optimal;
 #' workaround until we manage to implement treegapgenes function
-commongenes_cor <- function(
-  ab_o, across_a = characer(), across_b = character(), 
-  min_cor = 0.9) {
-  x <- ab_o[ , colnames(ab_o) %in% c(across_a, across_b) ]
-  res <- data.frame(
-    id = rownames(x), 
-    cor = 0
-  )
-  
-  cols_a <- which(colnames(x) %in% across_a)
-  cols_b <- which(colnames(x) %in% across_b)
-  
-  for(i in 1:nrow(x)){
-    res$cor[i] <- cor(
-      c(as.matrix(x[i, cols_a])),
-      c(as.matrix(x[i, cols_b]))
+get_high_cor_genes <-
+  function(
+    mat, a_o,b_o, o = NULL, weights_method = "neg_exp",
+    topgenes_filt_method = "lm", ...
+  ) {
+    require(ggpointdensity)
+    require(ggplot2)
+    
+    mat <- mat
+    ab_o <- cbind(a_o,b_o)
+    
+    # Find the indices of the top five highest elements
+    ind <- head(order(mat, decreasing = FALSE), 5)
+    
+    # Convert the indices to rows and columns
+    row_ind <- (ind - 1) %% nrow(mat) + 1
+    col_ind <- (ind - 1) %/% nrow(mat) + 1
+    
+    # Print the result
+    cat("The top five similar pair of stages are:", mat[ind], "\n")
+    
+    print("Subsetting count matrices")
+    hcor_ab <- list()
+    for (i in 1:length(ind)) {
+      
+      hco <-
+        data.frame(
+          a = log1p(a_o[,row_ind[i]]),
+          b = log1p(b_o[,col_ind[i]]),
+          row.names = rownames(a_o)
+        )
+      
+      hcor_ab[[i]] <- hco
+      
+      names(hcor_ab)[i] <- 
+        paste0(
+          "cor_",
+          colnames(a_o)[row_ind[i]],
+          "__",
+          colnames(b_o)[col_ind[i]]
+        )
+    }
+    
+    print("Model fitting and top genes")
+    hcor_ab_topgenes <- list()
+    for (i in 1:length(hcor_ab)){
+      
+      jsd_value <- round(mat[row_ind[i],col_ind[i]],2)
+      
+      hco <- hcor_ab[[i]]
+      
+      name_ <- names(hcor_ab)[i]
+      
+      # lm
+      hco_lm <- lm(b ~ a, data = hco)
+      
+      #define weights to use
+      
+      if (weights_method == "neg_exp") {
+        # use relative of neg exponential of square fitted values as weights
+        wt <- exp(-lm(abs(hco_lm$residuals) ~ hco_lm$fitted.values)$fitted.values)
+        wt <- relativise(wt)
+      } else {
+        # else use the square fit of the relationship between residuals and fits
+        wt <- 1 / lm(abs(hco_lm$residuals) ~ hco_lm$fitted.values)$fitted.values^2
+      }
+      
+      #perform weighted least squares regression
+      hco_lm_wls <- lm(b ~ a, data = hco, weights = wt)
+      
+      if (topgenes_filt_method == "lm"){
+        
+        colnames_of_interest <- c(
+          colnames(a_o)[row_ind[i]],
+          colnames(b_o)[col_ind[i]]
+        )
+        
+        topgenes <- topgenes_lmfit(
+          data = ab_o,
+          cols_of_interest = colnames_of_interest
+        )
+        
+        filt <- which(rownames(hco) %in% topgenes)
+        
+      } else if (topgenes_filt_method == "rank"){
+        #rank, will use later
+        hco$sum <- hco$a + hco$b
+        hco$rank <- rank(-hco$sum,ties.method = "min")
+        filt <- which(hco$rank <= quantile(hco$rank,.1))
+      } else {
+        filt <- which(
+          abs(hco_lm_wls$residuals) < 1 &
+            leverage > mean(leverage) &
+            hco$a > mean(hco$a) &
+            hco$b > mean(hco$b) 
+        )
+      }
+      
+      # plots
+      {
+        ab_scatter_ggplot2 <-
+          ggplot(data = hco,mapping = aes(x=a,y=b)) +
+          labs(title = name_ ) +
+          geom_pointdensity()+
+          stat_smooth(method = "lm", se = FALSE, color = "red") + 
+          theme_minimal()+
+          scale_color_viridis()+
+          annotate(
+            "text", x = Inf, y = -Inf, hjust = 1, vjust = 0, 
+            label = paste(
+              "Equation: y =", 
+              sprintf("%.2f", coef(summary(lm(b ~ a, data = hco, weights = wt)))[2, 1]), "x +", 
+              sprintf("%.2f", coef(summary(lm(b ~ a, data = hco, weights = wt)))[1, 1]), "\n",
+              "J-S Divergence = ", jsd_value
+            )
+          )
+        
+        p <- 
+          ggplot(data = hco, aes(x = a, y = b)) +
+          geom_point(pch = 20, col = rgb(0.1,0.1,0.1,0.1)) +
+          geom_abline(
+            slope = hco_lm$coefficients[2], 
+            intercept = hco_lm$coefficients[1], col = "blue") +
+          geom_abline(
+            slope = hco_lm_wls$coefficients[2], 
+            intercept = hco_lm_wls$coefficients[1], col = "red", lwd = 1.25) +
+          geom_point(data = hco[filt,], pch = 21, col = "black", bg = "lightgreen") +
+          labs(title = name_)+
+          theme_minimal()
+      }
+      
+      if (is.null(o) == TRUE) {
+        top_genes <- rownames(hco)[filt]
+      } else{
+        top_genes <- o[o$one2one %in% rownames(hco)[filt],]
+      }
+      
+      res_i <- list(
+        top_genes = top_genes,
+        lm = hco_lm_wls,
+        plot = ab_scatter_ggplot2,
+        plot_topgenes = p
+      )
+      
+      hcor_ab_topgenes[[i]] <- res_i
+      names(hcor_ab_topgenes)[i] <- name_
+    }
+    
+    res <- list(
+      hicor_matrices = hcor_ab,
+      hicor_topgenes = hcor_ab_topgenes
     )
+    
+    return(res)
   }
-  res <- res[res$cor > min_cor, ]
-  expr <- merge(
-    t(scale(t(log(ab_o[
-      rownames(ab_o) %in% res$id,
-      colnames(ab_o) %in% 
-        across_a
-    ]+1)))),
-    t(scale(t(log(ab_o[
-      rownames(ab_o) %in% res$id,
-      colnames(ab_o) %in% 
-        across_b
-    ]+1)))),
-    by = 0
-  )
-  res <- merge(
-    res,
-    expr,
-    by.x = 1,
-    by.y = 1,
-    all.x = TRUE
-  )
-  #add option to include the original names in spp A and B
-  return(res)
-}
 
 #' comparemodules: gene family enrichment between modules, 
 #' using the gfam object and the modules from each species, 
@@ -242,7 +355,7 @@ comparemodules <- function(ma, mb, f){
   #' Create a matrix to store results (-logpval or similar)
   PVS <- data.frame() # create matrix to store result pval
   PVS_binom <- data.frame()
-
+  
   
   #' Compute the upper tail of the hypergeometric 
   #' distribution (survival function) for each pair of modules
@@ -250,27 +363,26 @@ comparemodules <- function(ma, mb, f){
   for (i in 1:length(ma_list)){ #need to dramatically optimise speed
     
     a_modulei_name <- names(ma_list[i])
-    a_modulei_genes <- ma_list[[i]] # from here, a bit later down below, grab the genes that belong to gene families in common with species b
+    a_modulei_genes <- ma_list[[i]]
     a_fams <- gimme_fams(a_modulei_genes) #is this slow?
     
     for (j in 1:length(mb_list)){
       
       b_modulej_name <- names(mb_list[j])
-      b_modulej_genes <- mb_list[[j]] # from here, a bit later down below, grab the genes that belong to gene families in common with species a
-    a_fams <- gimme_fams(a_modulei_genes) #is this slow?
+      b_modulej_genes <- mb_list[[j]]
       b_fams <- gimme_fams(b_modulej_genes) #is this slow?
       
       sample_size <- length(a_fams)
       success_in_pop <- length(b_fams)
       common_fams <- paste(
         a_fams[which(a_fams %in% b_fams)], collapse = ", "
-        )
+      )
       exclusive_fams_a <- paste(
         a_fams[which(!(a_fams %in% b_fams))], collapse = ", "
-        )
+      )
       exclusive_fams_b <- paste(
         b_fams[which(!(b_fams %in% a_fams))], collapse = ", "
-        )
+      )
       success_in_sample <- length(which(a_fams %in% b_fams))
       
       if (success_in_sample > 0) {
@@ -286,7 +398,7 @@ comparemodules <- function(ma, mb, f){
           x = success_in_sample, 
           n = sample_size, 
           p = success_in_pop / gene_POP, 
-          )$p.value
+        )$p.value
         
         fon <- rbind(
           fon, 
@@ -297,10 +409,9 @@ comparemodules <- function(ma, mb, f){
             -log(hypg), as.numeric(binom), common_fams, # add here which are the names of the gfams enriched.
             exclusive_fams_a, # exclusive fams in a
             exclusive_fams_b # exclusive fams in b
-            # add here four more columns: "a" genes in common fams, "a" genes in exclusive fams, "b" genes in common fams, "b" genes in exclusive fams
-            )
+          )
         )
-      } else { # if no common gfams found, report these pvals as 1
+      } else {
         hypg <- 1
         binom <- 1
       }
@@ -341,9 +452,6 @@ comparemodules <- function(ma, mb, f){
 
 
 #' Second part of comparemodules.
-#' 
-#' IMPORTANT HERE AS WELL; REVISE. MUCH FEWER GENES IN THE SETS THAN EXPECTED.
-#' 
 #' genes_in_key_fams: Function to retrieve and visualize the enriched
 #' gene families by doing gene age enrichment/visualisation;
 #' basically it takes the fon table, grab the most significant
@@ -377,9 +485,9 @@ genes_in_key_fams <- function(
   stats, f, age_a, ma, mb, module_a = FALSE, module_b = FALSE, # add which metric: hypgeom or binomial
   top_comparisons = 10, common = TRUE, exclusive = FALSE , 
   age_b, cog_a, cog_b, same_species = FALSE, 
-  gene2go_a, gene2go_b, universe_a, universe_b, universe, 
-   ...
-  ){
+  gene2go_a, gene2go_b, universe_a, universe_b, universe, sep,
+  ...
+){
   #' The proper way to do this is, taking the exact genes
   #' from that module based on what gene families they
   #' are from.
@@ -418,7 +526,7 @@ genes_in_key_fams <- function(
     }
     x <- x[1:top_comparisons, ]
   }
-
+  
   # Analysis of COMMON fams
   if (common == TRUE ) {
     keygenes_commonfams <- key_genes_in_common_fams(
@@ -426,7 +534,7 @@ genes_in_key_fams <- function(
       gene2go_a = gene2go_a, cog_a = cog_a, ma = ma, mb = mb,
       sep = sep)
   }
-
+  
   # Analysis of EXCLUSIVE fams
   if (exclusive == TRUE ) {
     keygenes_exclusivefams <- key_genes_in_exclusive_fams(
@@ -457,4 +565,48 @@ genes_in_key_fams <- function(
   
   # return outputs
   return(res)
+}
+
+#' js_with_subsampling: applies bootstrap using the j-s function
+#' 
+jsd_with_subsampling <- function(
+  a_o,b_o, n = 1000, p = 0.75, bootstrap = FALSE
+) {
+  
+  ensemble_js = vector(mode = "list", length = n)
+  
+  genes = rownames(a_o)[rownames(a_o) %in% rownames(b_o)]
+  
+  for (i in 1:n) { 
+    if (bootstrap == TRUE) p = 1
+    
+    ids = sample(genes, p*length(genes), replace = bootstrap)
+    
+    a_ <- a_o[ids,]
+    b_ <- b_o[ids,]
+    
+    js <- jsd(a_, b_)
+    
+    ensemble_js[[i]] = js
+  }
+  
+  # calculate the mean matrix
+  mean_js <- Reduce("+", ensemble_js) / n
+  
+  # sd_js <- Reduce("+", lapply(ensemble_js, function(x) (x - apply(ensemble_js, 2, mean))^2)) / n-1
+  # sd_js <- sqrt(sd_js)
+  
+  rownames(mean_js) = colnames(a_o)
+  colnames(mean_js) = colnames(b_o)
+  
+  # rownames(sd_js) = colnames(a_o)
+  # colnames(sd_js) = colnames(b_o)
+  
+  res <- list(
+    mean = mean_js#,
+    # sd = sd_js
+  )
+  
+  return(res)
+  
 }
