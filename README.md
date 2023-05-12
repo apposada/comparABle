@@ -22,7 +22,7 @@ conditions based on bootstrapped survival clustering, and compares gene modules 
  2. Associate the datasets using the association file of 1-to-1 orthologues
  3. Perform a principal component analysis with the merge of the two datasets
  4. Perform pairwise correlations and distance metrics between conditions (in our case, developmental stages) of datasets to see their relationships of similarity. By default: Pearson Correlation, Spearman Correlation, and Jensen-Shannon Divergence. 
- 5. Identify the genes showcasing highes values of correlations across a number of pre-determined conditions (in our case, stages), and perform Gene Age and Gene Ontology enrichment analysis
+ 5. Identify the genes responsible for the pairwise-similarities observed in step4 across conditions (in our case, stages), and perform Gene Age and Gene Ontology enrichment analysis
  6. Perform a co-occurrence analysis in the merge of the two datasets (pairwise correlations, hierarchical clustering, and bootstrapping with downsampling) (Current implementation as seen in Levy et al., 2021 repo: https://github.com/sebepedroslab/Stylophora_single_cell_atlas/blob/857eb758bb6886bd91482cfe601e9bd5f56b12de/metacell_downstream_functions/Tree_functions.R )
  7. Perform Orthology Overlap analysis (hypergeometric and binomial) in pairwise correlations between gene sets (==stage-specific clusters) of each species.
  8. Identify the genes of the gene families that appear significantly enriched across pairs of gene sets, and perform Gene Age, Gene Ontology, and Functional Category enrichment analyses.
