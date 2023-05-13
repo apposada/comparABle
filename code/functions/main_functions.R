@@ -157,7 +157,7 @@ treeFromEnsembleClustering <- function(
 get_high_cor_genes <-
   function(
     mat, a_o,b_o, o = NULL, weights_method = "neg_exp",
-    topgenes_filt_method = "lm", ...
+    topgenes_filt_method = "lm", stages, ...
   ) {
     require(ggpointdensity)
     require(ggplot2)
@@ -165,6 +165,8 @@ get_high_cor_genes <-
     mat <- mat
     ab_o <- cbind(a_o,b_o)
     
+    
+    if (is.null(stages)) {
     # Find the indices of the top five highest elements
     ind <- head(order(mat, decreasing = FALSE), 5)
     
@@ -174,6 +176,12 @@ get_high_cor_genes <-
     
     # Print the result
     cat("The top five similar pair of stages are:", mat[ind], "\n")
+    } else {
+      if (length(stages$a) != length(stages$b)) stop("incorrect number of stages chosen, are you missing something?")
+      row_ind <- sapply(stages$a,function(x){grep(x,colnames(a_o))})
+      col_ind <- sapply(stages$b,function(x){grep(x,colnames(b_o))})
+      ind <- 1:length(stages$a)
+    }
     
     print("Subsetting count matrices")
     hcor_ab <- list()
