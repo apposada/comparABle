@@ -157,7 +157,7 @@ treeFromEnsembleClustering <- function(
 get_high_cor_genes <-
   function(
     mat, a_o,b_o, o = NULL, weights_method = "neg_exp",
-    topgenes_filt_method = "lm", stages, ...
+    topgenes_filt_method = "lm", stages = NULL, ...
   ) {
     require(ggpointdensity)
     require(ggplot2)
