@@ -1,10 +1,14 @@
 #' Params
-#' @param genelist must be a object of type list() containing an undetermined number of character vectors. Each component of the list is a char vector of gene names. This function will perform gene ontology enrichment using the char vector as test sample and the totality of your organism's genes as population (Universe). 
-#' @gene_universe is a vector of characters containing the genes you want to use as universe. This is normally the totality of genes in your species, or the totality of genes with recollected expression in your dataset.
+#' @param genelist must be a object of type list() containing an undetermined number of character vectors. Each component of the list is a char vector of gene names. This function will perfor
+m gene ontology enrichment using the char vector as test sample and the totality of your organism's genes as population (Universe). 
+#' @gene_universe is a vector of characters containing the genes you want to use as universe. This is normally the totality of genes in your species, or the totality of genes with recollected
+ expression in your dataset.
 #' @alg is the algorithm of choice, default is 'Classic', but 'elim' is advised
 #' @cols is a char vector of the colors used in the barplots
 #' 
 require(topGO)
+require(ggplot2)
+require(viridis)
 # getGOs(list(tfs,egs,active_tfs,target_genes,V(graph)$name),toy_universe)
 getGOs <- function(
   genelist,
@@ -12,7 +16,8 @@ getGOs <- function(
   gene2GO,
   alg = "Classic",
   stat = "fisher",
-  cols=rainbow(length(genelist))
+  cols = colorRampPalette(viridis::magma(11)),
+  max_terms = NULL
 ) {
   res <- list(
     GOtable = list(),
@@ -46,7 +51,7 @@ getGOs <- function(
     )
     
     #test
-    res_x <- runTest(GOdata_x, algorithm = alg, statistic = "fisher")
+    res_x <- runTest(GOdata_x, algorithm = alg, statistic = stat)
     
     #table
     allres_x <- GenTable(
@@ -59,32 +64,36 @@ getGOs <- function(
     )
     allres_x <- allres_x[allres_x$Annotated > 5,]
     allres_x$classicFisher[allres_x$classicFisher=="< 1e-30"] <- 1e-30
+    allres_x$classicFisher <-
+      parse_number(allres_x$classicFisher)
+    allres_x$classicFisher <-
+      as.numeric(allres_x$classicFisher)
     
-    maxgenesplot <- ifelse(nrow(allres_x) > 10, 10, nrow(allres_x))
+    if(!is.null(max_terms)){
+      maxgenesplot <- ifelse(nrow(allres_x) > max_terms, max_terms, nrow(allres_x))
+    } else {
+      maxgenesplot <- nrow(allres_x)
+    }
+    
     res$GOtable[[j]] <- allres_x
-    
     #plot
-    res$GOplot[[j]] <- list(
-      height = as.vector(
-        rev(
-          -log(
-            as.numeric(allres_x$classicFisher[1:maxgenesplot]) * 
-              length(x)
-          )
+    res$GOplot[[j]] <- 
+      ggplot(
+        allres_x[1:maxgenesplot,], 
+        aes(
+          x = reorder(Term, -log10(classicFisher)),
+          y = Significant/Expected,
+          fill = -log10(classicFisher)
         )
-      ),
-      horiz=T,
-      border=F,
-      names.arg=rev(allres_x$Term[1:maxgenesplot]),
-      sub="-log10 p-value",
-      main="GOs (elim,\n> 5 annot genes)",
-      las=1,
-      col=cols[j],
-      space=c(0.5),
-      cex.names=.7,
-      plot=FALSE
-    )
+      )+
+      geom_bar(stat = "identity") +
+      scale_fill_gradientn(colors = cols(10), name = "-log10(pvalue)") +
+      coord_flip() +
+      theme_classic() +
+      labs(x = "GO term", y = "Significant/Expected ratio",
+           title = names(genelist)[j])
   }
   names(res$GOtable) <- names(genelist)
+  names(res$GOplot) <- names(genelist)
   return(res)
 }
