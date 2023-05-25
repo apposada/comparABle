@@ -1,11 +1,9 @@
 #' Params
-#' @param genelist must be a object of type list() containing an undetermined number of character vectors. Each component of the list is a char vector of gene names. This function will perfor
-m gene ontology enrichment using the char vector as test sample and the totality of your organism's genes as population (Universe). 
-#' @gene_universe is a vector of characters containing the genes you want to use as universe. This is normally the totality of genes in your species, or the totality of genes with recollected
- expression in your dataset.
+#' @param genelist must be a object of type list() containing an undetermined number of character vectors. Each component of the list is a char vector of gene names. This function will perform gene ontology enrichment using the char vector as test sample and the totality of your organism's genes as population (Universe). 
+#' @gene_universe is a vector of characters containing the genes you want to use as universe. This is normally the totality of genes in your species, or the totality of genes with recollected expression in your dataset.
 #' @alg is the algorithm of choice, default is 'Classic', but 'elim' is advised
 #' @cols is a char vector of the colors used in the barplots
-#' 
+#' @max_terms specifies if you want to keep all or a given number of terms in the barplot
 require(topGO)
 require(ggplot2)
 require(viridis)
